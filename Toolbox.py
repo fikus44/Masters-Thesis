@@ -3,6 +3,7 @@ import numpy as np
 import os 
 import csv
 
+
 def downcast(data, output = True):
     
     """
@@ -40,6 +41,7 @@ def downcast(data, output = True):
         print(f'After downcast: {data.memory_usage().sum()/(1024 ** 3):1.3f} GB and {data.dtypes.value_counts()}')
         #print(f'After downcast: {data.dtypes.value_counts()}')
 
+        
 
 def dim_reduction(data, threshold, corr_matrix = False):
     
@@ -76,9 +78,30 @@ def dim_reduction(data, threshold, corr_matrix = False):
         return to_drop, cor_matrix#, filtered_data
     else:
         return to_drop#, filtered_data
-                           
+      
+        
     
 def interaction(firm_data, macro_data):
+    
+    """
+    dim_reduction reduces the dimensionalty of a data set by filtering out
+    highly correlated variables above a threshold value. 
+    
+    
+    Parameters
+    ----------
+    data : pd.dataframe 
+        The data set to filter
+        
+    threshold : scalar
+        Threshold value determining whether a covariate gets filtered out
+        
+        
+    Returns
+    -------
+        pd.dataframe of filtered data 
+        
+    """
     
     # Initialize empty dataframe
     interaction = pd.DataFrame(columns = range(0), index = range(firm_data.shape[0]))
@@ -103,7 +126,38 @@ def interaction(firm_data, macro_data):
     return interaction, mean, std
 
 
+
 def interaction_noRAM(firm_data, macro_data, mean, std, filename):
+    
+    """
+    interaction_noRAM computes the interaction terms of firm_data and macro_data
+    one line at a time, i.e. without loading either of the two files to memory. 
+    Instad, it saves the interaction terms directly to disc. 
+    
+    
+    Parameters
+    ----------
+    firm_data : pd.dataframe 
+        First data set from which to compute interaction terms
+        
+    macro_data : pd.dataframe
+        Second data set from which to compute interaction terms
+        
+    mean : np.array
+        Mean of all columns post interaction term computation
+        
+    std : np.array
+        Standard deviation off all columns post interaction term computation
+    
+    filename : string
+        Name of file to save to
+        
+        
+    Returns
+    -------
+        None
+        
+    """
     
     for i in range(firm_data.shape[0]):
     
@@ -125,16 +179,45 @@ def interaction_noRAM(firm_data, macro_data, mean, std, filename):
     
     return None
  
-
-def data_processing(data, start, end):
     
-    # Add column of ones (useful for computing interaction term later on)
-    data["constant"] = 1
+
+def data_processing(data, TV_date, V_date, T_date):
+    
+    """
+    data_processing separates the data across two dimensions: firm vs macro 
+    and traning vs validation vs test for a total of six data sets leveraged
+    as input in the functions interaction() and interaction_noRAM(). Additionally,
+    the function also cleans the data for NaN or observations and removes highly
+    correlated variables. 
+        
+    Parameters
+    ----------
+    data : pd.dataframe 
+        The data set to process
+        
+    TV_date : int
+        The training valuation date is the date separating the training and validation
+        set
+        
+    V_date : int
+        The validation date marks the end of the validation set
+        
+    T_date : int
+        The test date marks the beginning of the test set. Due to forward-chaining CV
+        the V_date and T_date need not be identical. I refer to Gu, Kelly, and Xiu (2020)
+        or my thesis for more information. 
+        
+        
+    Returns
+    -------
+        6 pd.dataframes of processed data ready for the computation of the interaction terms. 
+        
+    """
     
     # Split data up according to dates
-    data_training = data[data["date"] < start].set_index(["permno", "date"])
-    data_validation = data[(data["date"] >= start) & (data["date"] < end)].set_index(["permno", "date"])
-    data_test = data[(data["date"] >= end) & (data["date"] < 201701)].set_index(["permno", "date"])
+    data_training = data[data["date"] < TV_date].set_index(["permno", "date"])
+    data_validation = data[(data["date"] >= TV_date) & (data["date"] < V_date)].set_index(["permno", "date"])
+    data_test = data[(data["date"] >= T_date) & (data["date"] < 201701)].set_index(["permno", "date"])
     
     # Split data up in firm characteristics and macro data
     firm_to_drop = ["constant", "dp_macro", "ep_macro", "bm_macro", "ntis", "tbl", "tms", "dfy", "svar"]
@@ -150,7 +233,7 @@ def data_processing(data, start, end):
     # Drop columns based on korrelation matrix
     to_drop = dim_reduction(data = firm_training, threshold = 0.90, corr_matrix = False)
     firm_training = firm_training.drop(to_drop, axis = 1)
-    firm_valiation = firm_validation.drop(to_drop, axis = 1)
+    firm_validation = firm_validation.drop(to_drop, axis = 1)
     firm_test = firm_test.drop(to_drop, axis = 1)
     
     # Drop columns for which NaN or 0 are the only observations
@@ -164,42 +247,162 @@ def data_processing(data, start, end):
     
     return firm_training, firm_validation, firm_test, macro_training, macro_validation, macro_test
 
-    '''
-    # Compute interaction terms for training and validation data and standardize
-    training_data, mean, std = interaction(firm_training, macro_training)
-    validation_data, _, _ = interaction(firm_validation, macro_validation)
-    
-    
-    # Compute interaction terms for test data and standardize 
-    interaction_noRAM(firm_test, macro_test, mean = mean, std = std, filename = filename)
-    
-    
-    # Test data is saved to disc
-    return training_data, validation_data 
-    '''
+
 
 def loadtxt(name):
+    
+    """
+    loadtxt loads the file "name" and yields each line at a time as a 
+    np.array
+    
+    
+    Parameters
+    ----------
+    name : string 
+        File to load
+        
+        
+    Yields
+    -------
+        One line of file "name" 
+        
+    """
+    
     with open(name, "r") as file:
+        
         for line in file:
             line_int = np.fromstring(line, sep = ",").reshape(-1,1).T # 1xK 2D array
+            
             yield line_int
+
             
             
-def pca_each_line(name, pc):  
+def pca_each_line(name, pc):
+    
+    """
+    pca_each_line employs PCA on each line of the file "name". One line 
+    at a time. The principcal components are computed from the training 
+    data
+    
+    
+    Parameters
+    ----------
+    name : string
+        File to load
+        
+    pc : np.array
+        Principal components of PCA
+        
+        
+    Yields
+    -------
+        One line of file "name" post-PCA 
+        
+    """
     
     for line in loadtxt(name):
         pca_line = np.dot(line, pc)
         to_append = (pca_line[0]).tolist()
         
-        yield to_append
+        yield to_append       
         
+
         
 def save_txt(name, newfilename, pc):
+    
+    """
+    save_txt saves the PCA transformed file "name" to a new file
+    "newfilename" 
+    
+    
+    Parameters
+    ----------
+    name : string  
+        File to load
+        
+    pc : np.array
+        Principal components of PCA
+        
+    newfilname : string
+        New file to save too
+        
+        
+    Returns / Yields
+    -------
+        None
+        
+    """
+    
     with open(os.path.dirname(os.getcwd()) + "\\" + newfilename, "a", newline = "") as newfile:
         writer = csv.writer(newfile)
         for newline in pca_each_line(name, pc):
             writer.writerow(newline)
+            
+            
+            
+def dummies(data, TV_date, V_date, T_date):
+    
+    """
+    dummies converts the 1-column vector of industry categories to a 
+    P-dimensional matrix of industry dummies with P corresponding to the
+    number of industries. Moreover, it filters out categories not represented
+    in the training data (cannot predict on industries not in the training data)
+    
+    
+    Parameters
+    ----------
+        Parameters
+    ----------
+    data : pd.dataframe 
+        The data set (dummies) to process
         
+    TV_date : int
+        The training valuation date is the date separating the training and validation
+        set
+        
+    V_date : int
+        The validation date marks the end of the validation set
+        
+    T_date : int
+        The test date marks the beginning of the test set. Due to forward-chaining CV
+        the V_date and T_date need not be identical. I refer to Gu, Kelly, and Xiu (2020)
+        or my thesis for more information. 
+        
+        
+    Returns
+    -------
+        3 pd.dataframes of 
+        
+        
+    """
+    
+    # Split industry dummies according to dates
+    industry_dummies_t = pd.get_dummies(data[data.index.get_level_values("date") < TV_date])
+    industry_dummies_v = pd.get_dummies(data[(data.index.get_level_values("date") >= TV_date) & 
+                                                  (data.index.get_level_values("date") < V_date)])
+    industry_dummies_tt = pd.get_dummies(data[data.index.get_level_values("date") >= T_date])
+    
+    # Drop industries not represented in the training data
+    col_training = [col for col in industry_dummies_t.columns]
+    col_validation = [col for col in industry_dummies_v.columns] 
+    col_test =  [col for col in industry_dummies_tt.columns] 
+    
+    # To drop
+    to_keep_validation = [col for col in col_training and col_validation if col in col_training and col_validation]
+    to_keep_test = [col for col in col_training and col_test if col in col_training and col_test]
+    
+    # Filter
+    industry_dummies_v = industry_dummies_v[to_keep_validation]
+    industry_dummies_tt = industry_dummies_tt[to_keep_test]
+    
+    return industry_dummies_t.reset_index(), industry_dummies_v.reset_index(), industry_dummies_tt.reset_index()
+
+  
+        
+
+        
+        
+
 # For pænt setup: https://github.com/bkelly-lab/ipca/blob/master/ipca/ipca.py
 
         
