@@ -30,12 +30,20 @@ def downcast(data, output = True):
     if output:
         print("Before downcast: {:1.3f} GB and {}".format(data.memory_usage().sum()/(1024 ** 3), data.dtypes.value_counts()))
         #print("Before downcast: {}".format(data.dtypes.value_counts()))
+        
+    i = 0
     
     for column in data:
+        
+        i+= 1
+        #print(i)
+        
         if data[column].dtype == 'float64':
             data[column]=pd.to_numeric(data[column], downcast='float')
         if data[column].dtype == 'int64':
             data[column]=pd.to_numeric(data[column], downcast='integer')
+        
+        
     
     if output:
         print(f'After downcast: {data.memory_usage().sum()/(1024 ** 3):1.3f} GB and {data.dtypes.value_counts()}')
@@ -84,8 +92,8 @@ def dim_reduction(data, threshold, corr_matrix = False):
 def interaction(firm_data, macro_data):
     
     """
-    dim_reduction reduces the dimensionalty of a data set by filtering out
-    highly correlated variables above a threshold value. 
+    interaction computes the interaction terms of firm_data and macro_data
+    for the training and validation set. Moreover, it standardizes data
     
     
     Parameters
@@ -113,7 +121,17 @@ def interaction(firm_data, macro_data):
         column_ite = [str(col) + f'X{value}' for col in firm_data.columns] 
         df_ite = pd.DataFrame(product_ite, columns = column_ite)
         interaction = pd.concat([interaction, df_ite], axis = 1)
-    
+        
+        '''
+        # The function would upcast the training data for some reason. Downcast again.
+        for column in interaction:
+            if interaction[column].dtype == 'float64':
+                interaction[column]=pd.to_numeric(interaction[column], downcast='float')
+            if interaction[column].dtype == 'int64':
+                interaction[column]=pd.to_numeric(interaction[column], downcast='integer')
+          
+        print(interaction.info())
+        '''
 
     # Save mean and standardization for validation and test set 
     mean = interaction.mean().values.reshape(-1,1).T
@@ -132,7 +150,9 @@ def interaction_noRAM(firm_data, macro_data, mean, std, filename):
     """
     interaction_noRAM computes the interaction terms of firm_data and macro_data
     one line at a time, i.e. without loading either of the two files to memory. 
-    Instad, it saves the interaction terms directly to disc. 
+    Instad, it saves the interaction terms directly to disc. In closing, the
+    function also standardizes the data leveraing the mean and standard deviation
+    from the training set.
     
     
     Parameters
@@ -301,7 +321,7 @@ def pca_each_line(name, pc):
     """
     
     for line in loadtxt(name):
-        pca_line = np.dot(line, pc)
+        pca_line = np.dot(line, pc.T)
         to_append = (pca_line[0]).tolist()
         
         yield to_append       
@@ -371,27 +391,38 @@ def dummies(data, TV_date, V_date, T_date):
         
     Returns
     -------
-        3 pd.dataframes of 
+        3 pd.dataframes
         
         
     """
     
     # Split industry dummies according to dates
-    industry_dummies_t = pd.get_dummies(data[data.index.get_level_values("date") < TV_date])
+    industry_dummies_t = pd.get_dummies(data[data.index.get_level_values("date") < TV_date].sic2)
     industry_dummies_v = pd.get_dummies(data[(data.index.get_level_values("date") >= TV_date) & 
-                                                  (data.index.get_level_values("date") < V_date)])
-    industry_dummies_tt = pd.get_dummies(data[data.index.get_level_values("date") >= T_date])
+                                                  (data.index.get_level_values("date") < V_date)].sic2)
+    industry_dummies_tt = pd.get_dummies(data[data.index.get_level_values("date") >= T_date].sic2)
     
-    # Drop industries not represented in the training data
+    # Drop industries not represented in the training, validation, and test data. If not we might end up
+    # with a different number of columns in each of the sets
     col_training = [col for col in industry_dummies_t.columns]
     col_validation = [col for col in industry_dummies_v.columns] 
     col_test =  [col for col in industry_dummies_tt.columns] 
     
-    # To drop
-    to_keep_validation = [col for col in col_training and col_validation if col in col_training and col_validation]
-    to_keep_test = [col for col in col_training and col_test if col in col_training and col_test]
+    # To keep
+    to_keep_training = [col for col in col_training if col in col_training and col in col_validation and col in col_test]
+    to_keep_validation = [col for col in col_validation if col in col_training and col in col_validation and col in col_test]
+    to_keep_test = [col for col in col_test if col in col_training and col in col_validation and col in col_test]
     
+    # Could use assert too
+    if to_keep_training != to_keep_validation:
+        print("The filters are not identical!")
+    if to_keep_validation != to_keep_test:
+        print("The filters are not identical!")
+    if to_keep_training != to_keep_test:
+        print("The filters are not identical!")
+        
     # Filter
+    industry_dummies_t = industry_dummies_t[to_keep_training]
     industry_dummies_v = industry_dummies_v[to_keep_validation]
     industry_dummies_tt = industry_dummies_tt[to_keep_test]
     
