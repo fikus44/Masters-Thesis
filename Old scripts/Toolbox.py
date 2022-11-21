@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 import os 
 import csv
+from sklearn.decomposition import PCA
 
 
 
-def partition_dates(iteration):
+def partition_dates(iteration): # support func
     
     """
     Update data split according to iteration 
@@ -38,7 +39,7 @@ def partition_dates(iteration):
     return tr_start, tr_end, v_start, v_end, t_start, t_end
 
 
-def data_partition(data, start_date, end_date):
+def data_partition(data, start_date, end_date): # support func
     
     """
     Splits data according to specified dates 
@@ -49,7 +50,7 @@ def data_partition(data, start_date, end_date):
                 (data["date"] < end_date)].set_index(["permno", "date"])
     
 
-def firm_macro_data(data):
+def firm_macro_data(data): # support func
     
     """
     Separates firm and macro data
@@ -63,7 +64,7 @@ def firm_macro_data(data):
     
     return data.drop(macro_columns, axis = 1), data[macro_columns]
 
-def drop_NaN_or_constant(data):
+def drop_NaN_or_constant(data): # support func 
     
     """
     Drops columns for which there are only 0 or NaN observations
@@ -79,10 +80,47 @@ def drop_NaN_or_constant(data):
             drop_constant.append(i)
     
     return drop_constant
+
+
+def interaction_terms(firm_data, macro_data, mean, std, training_set = False): # dataprocess functions 
+    
+    # Initialize empty dataframe
+    interaction = pd.DataFrame(columns = range(0), index = range(firm_data.shape[0]))
+    
+    # Computer interaction terms
+    for count, value in enumerate(macro_data.columns):
+        
+        # .values returns np.array not pd.series
+        macro_ite = macro_data[value].values
+        # 2D to make compatible for element-wise multiplication
+        product_ite = macro_ite.reshape(-1,1) * firm_data.values 
+        
+        column_ite = [str(col) + f'X{value}' for col in firm_data.columns] 
+        
+        df_ite = pd.DataFrame(product_ite, columns = column_ite)
+        interaction = pd.concat([interaction, df_ite], axis = 1)
+        
+    
+    # Save mean and standard deviation for validation and test set
+    # Impute data and standardize training data in preperation
+    # of PCA
+    if training_set:
+        mean = interaction.mean()#.values.reshape(-1,1).T
+        std = interaction.std()#.values
+        
+        interaction = interaction.fillna(0)
+        interaction = interaction.apply(lambda x: (x - np.mean(x)) / np.std(x), axis = 0)
+                
+        return interaction, mean, std
+                    
+    interaction = interaction.fillna(0)
+    interaction = interaction.apply(lambda x: (x - mean) / std, axis = 1)                      
+                          
+    return interaction
     
 
 
-def downcast(data, output = True):
+def downcast(data, output = True): # support func 
     
     """
     Downcast converts 64bit float and ints to 32bits thus reducing the 
@@ -129,7 +167,7 @@ def downcast(data, output = True):
 
         
 
-def dim_reduction(data, threshold, corr_matrix = False):
+def dim_reduction(data, threshold, corr_matrix = False): # dataprocess functions
     
     """
     dim_reduction reduces the dimensionalty of a data set by filtering out
@@ -167,7 +205,7 @@ def dim_reduction(data, threshold, corr_matrix = False):
       
         
     
-def interaction(firm_data, macro_data):
+def interaction(firm_data, macro_data): # gammel toolbox
     
     """
     interaction computes the interaction terms of firm_data and macro_data
@@ -223,7 +261,7 @@ def interaction(firm_data, macro_data):
 
 
 
-def interaction_noRAM(firm_data, macro_data, mean, std, filename):
+def interaction_noRAM(firm_data, macro_data, mean, std, filename): #gammel toolbox
     
     """
     interaction_noRAM computes the interaction terms of firm_data and macro_data
@@ -276,10 +314,43 @@ def interaction_noRAM(firm_data, macro_data, mean, std, filename):
             writer.writerow(to_append)
     
     return None
+                      
+
+def interaction_new(data, iteration):
+    
+    # Load training, validation, and test data 
+    # for firm and macro data
+    tr_firm, v_firm, t_firm, tr_macro, v_macro, t_macro = data_processing_new(data, iteration)
+    
+    # Compute interaction terms 
+    tr_interaction, mean, std = interaction_terms(tr_firm, 
+                                                  tr_macro, 
+                                                  mean = None, 
+                                                  std = None, 
+                                                  training_set = True)
+    
+    v_interaction = interaction_terms(v_firm,
+                                      v_macro,
+                                      mean = mean,
+                                      std = std,
+                                      training_set = False)
+    
+    t_interaction = interaction_terms(t_firm,
+                                      t_macro,
+                                      mean = mean,
+                                      std = std,
+                                      training_set = False)
+    
+    # Check no NaN values 
+    assert tr_interaction.isnull().values.any() == False
+    assert v_interaction.isnull().values.any() == False
+    assert t_interaction.isnull().values.any() == False
+    
+    return tr_interaction, v_interaction, t_interaction
  
     
 
-def data_processing(data, TV_date, V_date, T_date):
+def data_processing(data, TV_date, V_date, T_date): # gammel toolbox
     
     """
     data_processing separates the data across two dimensions: firm vs macro 
@@ -346,7 +417,7 @@ def data_processing(data, TV_date, V_date, T_date):
     return firm_training, firm_validation, firm_test, macro_training, macro_validation, macro_test
 
 
-def data_processing_new(data, iteration):
+def data_processing_new(data, iteration): #dataprocess fucntions
     
     # Dates partitioning the training, validation, and test set 
     # according to Gu, Kelly, and Xiu (2020) by rolling-windows approach
@@ -391,7 +462,7 @@ def data_processing_new(data, iteration):
 
 
 
-def loadtxt(name):
+def loadtxt(name): # gammel toolbox
     
     """
     loadtxt loads the file "name" and yields each line at a time as a 
@@ -419,7 +490,7 @@ def loadtxt(name):
 
             
             
-def pca_each_line(name, pc):
+def pca_each_line(name, pc): # gammel toolbox
     
     """
     pca_each_line employs PCA on each line of the file "name". One line 
@@ -450,7 +521,7 @@ def pca_each_line(name, pc):
         
 
         
-def save_txt(name, newfilename, pc):
+def save_txt(name, newfilename, pc): # gammel toolbox
     
     """
     save_txt saves the PCA transformed file "name" to a new file
@@ -482,7 +553,7 @@ def save_txt(name, newfilename, pc):
             
             
             
-def dummies(data, TV_date, V_date, T_date):
+def dummies(data, TV_date, V_date, T_date): # gammel toolbox
     
     """
     dummies converts the 1-column vector of industry categories to a 
@@ -551,10 +622,129 @@ def dummies(data, TV_date, V_date, T_date):
     return industry_dummies_t.reset_index(), industry_dummies_v.reset_index(), industry_dummies_tt.reset_index()
 
 
+def pca(data, iteration): #dataprocess functions
+    
+    # Compute interaction terms 
+    tr_interaction, v_interaction, t_interaction = interaction_new(data, iteration)
+    
+    # Create instance of PCA class object
+    # and fit on training data
+    pca = PCA(n_components = 0.95)
+    pca.fit(tr_interaction)
+    
+    # Keep only principal components with 
+    # eigenvalues greater than 1
+    PC_eigenvalues = pca.components_[:pca.explained_variance_[pca.explained_variance_ >= 1].shape[0], :]
+    
+    # Transform data
+    tr_pca = np.dot(tr_interaction, PC_eigenvalues.T) # NxK @ KxP = NxP
+    v_pca = np.dot(v_interaction, PC_eigenvalues.T) 
+    t_pca = np.dot(t_interaction, PC_eigenvalues.T)
+    
+    # Return as pd.DataFrame 
+    # with column names
+    col_names = ['PC' + str(x) for x in range(1, tr_pca.shape[1]+1)]
+    
+    tr_pca = pd.DataFrame(tr_pca, columns = col_names)
+    v_pca = pd.DataFrame(v_pca, columns = col_names)
+    t_pca = pd.DataFrame(t_pca, columns = col_names)
+    
+    return tr_pca, v_pca, t_pca
 
+
+def process_dummies(data, iteration): # dataprocess funcs
+    
+    # Dates partitioning the training, validation, and test set 
+    # according to Gu, Kelly, and Xiu (2020) by rolling-windows approach
+    tr_start, tr_end, v_start, v_end, t_start, t_end = partition_dates(iteration)
+    
+    # Split industry dummies according to dates
+    tr_ind = industry_partition(data, tr_start, tr_end)
+    v_ind = industry_partition(data, v_start, v_end)
+    t_ind = industry_partition(data, t_start, t_end)
+    
+    # Drop industries not represented in the 
+    # training, validation, and test data
+    tr_ind, v_ind, t_ind = drop_missing_industry(tr_ind, v_ind, t_ind)
+    
+    return tr_ind.reset_index(), v_ind.reset_index(), t_ind.reset_index()
+
+
+def industry_partition(data, start_date, end_date): # support func
+    
+    return pd.get_dummies(data[(data.index.get_level_values("date") >= start_date) & 
+                                                  (data.index.get_level_values("date") < end_date)].sic2)
+
+def drop_missing_industry(tr_ind, v_ind, t_ind): # support func
+    
+    # Industries in each set
+    tr_industry = [col for col in tr_ind.columns]
+    v_industry = [col for col in v_ind.columns]
+    t_industry = [col for col in t_ind.columns]
+    
+    # Industries represented in all sets
+    # Could've used validation or test
+    # set as well
+    repped_industries = [col for col in tr_industry if col in tr_industry
+                         and col in v_industry and col in t_industry]
+    
+    # Keep repped industries
+    tr_ind = tr_ind[repped_industries]
+    v_ind = v_ind[repped_industries]
+    t_ind = t_ind[repped_industries]
+    
+    return tr_ind, v_ind, t_ind
+
+def returns_partition(data, start_date, end_date): # support func 
+    
+    return data[(data.index.get_level_values("date") >= start_date) & 
+                (data.index.get_level_values("date") < end_date)].reset_index()
+
+def process_returns(data, iteration): # dataprocess functions
+    
+    # Dates partitioning the training, validation, and test set 
+    # according to Gu, Kelly, and Xiu (2020) by rolling-windows approach
+    tr_start, tr_end, v_start, v_end, t_start, t_end = partition_dates(iteration)
+    
+    # Split returns into training, validation, and test set
+    tr_ret = returns_partition(data, tr_start, tr_end)
+    v_ret = returns_partition(data, v_start, v_end)
+    t_ret = returns_partition(data, t_start, t_end)
+    
+    return tr_ret, v_ret, t_ret
         
 
-        
+def complete_data_process(industry_data, returns_data, FM_data, iteration): # dataprocess functions
+    
+    # Industry dummies
+    tr_ind, v_ind, t_ind = process_dummies(data = industry_data, iteration = iteration) # industry code data 
+    
+    # Returns data
+    tr_ret, v_ret, t_ret = process_returns(data = returns_data, iteration = iteration) # returns data
+    
+    # PCA data
+    tr_pca, v_pca, t_pca = pca(data = FM_data, iteration = iteration) # FM_data
+    
+    # Merge
+    tr_data = pd.concat([tr_pca, tr_ind], axis = 1)
+    tr_data = tr_data.merge(tr_ret, on = ["permno", "date"], how = "inner").set_index(["permno", "date"])
+    
+    v_data = pd.concat([v_pca, v_ind], axis = 1)
+    v_data = v_data.merge(v_ret, on = ["permno", "date"], how = "inner").set_index(["permno", "date"])
+    
+    t_data = pd.concat([t_pca, t_ind], axis = 1)
+    t_data = t_data.merge(t_ret, on = ["permno", "date"], how = "inner").set_index(["permno", "date"])
+    
+    '''
+    print(
+    f'32-/64-bit {insert}, '
+    f'Columns: {insert}, '
+    f'Rows: {insert}, '
+    f'Size: {insert}, '
+    )
+    '''
+    
+    return tr_data, v_data, t_data
         
 
 # For pænt setup: https://github.com/bkelly-lab/ipca/blob/master/ipca/ipca.py
