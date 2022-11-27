@@ -47,6 +47,7 @@ setwd("C:/Users/thoma/OneDrive - KØbenhavns Universitet/Documents/Økonomi - Kand
 # Load data
 table1_data <- read.csv(file = "table1_data.csv")
 table2_data <- read.csv(file = "table2_data.csv")
+table4_data <- read.csv(file = "table4_data.csv")
 
 
 # Create tables
@@ -59,6 +60,9 @@ table2 <- table_theme(head(MA2_data %>% select(date, permno, sic2_46:sic2_52)), 
 
 names2 <- c("Metric", "Linear Regression", "Lasso", "Neural Network")
 table2 <-  table_theme(table2_data, colnames = names1, caption = "Squared Prediction Error and Explained Variation") 
+
+names4 <- c("X", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+table4 <- table_theme(table4_data, colnames = names4, caption = "Cumulative return of all machine learning portfolios")
 
 
 
