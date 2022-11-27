@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os 
 import csv
+import time 
 import SupportFunctions as supp
 from sklearn.decomposition import PCA
 
@@ -350,6 +351,12 @@ def process_dummies(data, iteration):
     # training, validation, and test data
     tr_ind, v_ind, t_ind = supp.drop_missing_industry(tr_ind, v_ind, t_ind)
     
+    # Change column names from int to string (one-hot encoded dummies'
+    # columns names are ints)
+    tr_ind.columns = tr_ind.columns.astype(str)
+    v_ind.columns = v_ind.columns.astype(str)
+    t_ind.columns = t_ind.columns.astype(str)
+    
     return tr_ind.reset_index(), v_ind.reset_index(), t_ind.reset_index()
 
 
@@ -419,6 +426,8 @@ def complete_data_process(industry_data, returns_data, FM_data, iteration):
         cleaned data
         
     """
+    # Start time
+    st = time.time()
     
     # Industry dummies
     tr_ind, v_ind, t_ind = process_dummies(data = industry_data, iteration = iteration) # industry code data 
@@ -439,13 +448,20 @@ def complete_data_process(industry_data, returns_data, FM_data, iteration):
     t_data = pd.concat([t_pca, t_ind], axis = 1)
     t_data = t_data.merge(t_ret, on = ["permno", "date"], how = "inner").set_index(["permno", "date"])
     
-    '''
+    # End time
+    et = time.time()
+    
     print(
-    f'32-/64-bit {insert}, '
-    f'Columns: {insert}, '
-    f'Rows: {insert}, '
-    f'Size: {insert}, '
+    f'Rows Training set: {tr_data.shape[0]}, '
+    f'Row Validation set: {v_data.shape[0]}, '
+    f'Rows test set: {t_data.shape[0]}, '
+    f'Columns: {t_data.shape[1]}, '
+    f'Iteration finished: {iteration}, '
+    f'Time: {(et-st) / 60}, '
+    f'Training Dtypes: {tr_data.dtypes.value_counts()}, '
+    f'Validation Dtypes: {v_data.dtypes.value_counts()}, '
+    f'Test Dtypes: {t_data.dtypes.value_counts()},'
     )
-    '''
+    
     
     return tr_data, v_data, t_data
