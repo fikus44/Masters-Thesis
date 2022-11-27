@@ -7,7 +7,7 @@ table_theme = function(data, colnames, caption, escape = TRUE) {
   
   data %>%
     kable(format = "latex", #Output er kompatibelt med LaTeX
-          digits = 2,  # no. of digits after comma
+          digits = 4,  # no. of digits after comma
           col.names = colnames, #søjlenavne
           align = c("l", rep("c", length(colnames) - 2), "r"), #Søjle alignement, første søjle er venstre aligned, herefter er alle søjle på nær den sidste søjle center aligned. Den sidste søjle er højre aligned
           caption = caption, #Tabel titel. Husk at caption skal angives som string i funktion. 

@@ -408,4 +408,116 @@ def cumulative_ret_fig(data, name, save_fig = False, hide = False):
     return None 
     
     
+
+def deciles_10_1_fig(name, save_fig = False, hide = False, **kwargs):
     
+    """
+    deciles_10_1_fig(name, save_fig, hide, **kwargs) 
+    compute the cumulative return figure for the
+    high and low portfolios of each ML model specified
+    in the **kwargs argument. 
+    
+    Parameters
+    ----------
+    
+    name : String 
+        Name of figure when saving to disk
+        
+    save_fig : Boolean 
+        Save figure to disk
+        
+    hide : Boolean 
+        Prevent from printing figure
+        
+    **kwargs : 
+        Data to be plotted
+
+        
+    Returns
+    -------
+        None
+        
+    """
+    
+    data = []
+    dates = []
+    
+    for i in kwargs:
+        
+        data_temp = [list(it.accumulate(kwargs[i][kwargs[i].index.get_level_values(1) == x].ret)) for x in [1, 10]]
+        data.append(data_temp)
+        
+        if len(dates) == 0:
+            dates_temp = list(kwargs[i].index.get_level_values(0).unique())
+            dates_temp = pd.to_datetime(dates_temp, format = '%Y%m')
+            dates.append(dates_temp)
+    
+    n = len(data)
+    
+    # Setup
+    plt.rcParams['figure.dpi'] = 300
+    plt.rcParams["font.family"] = "Times New Roman"
+    
+    # Plot
+    fig, ax = plt.subplots(figsize = (15,8))
+
+    color = iter(cm.viridis(np.linspace(0.1, 0.6, n)))
+    label = iter(["LR 1. Decile", "LR 10. Decile", "Lasso 1. Decile", "Lasso 10. Decile", "NN 1. Decile", "NN 10. Decile"])
+
+    for i in range(n):
+    
+        c = next(color)
+        l = next(label)
+        
+        # I have to specify [0] for dates. Otherwise it is
+        # (1, 192) and so not compatible with data dimensioned
+        # (192,)
+        ax.plot(dates[0],
+                data[i][0], 
+                c = c, 
+                label = l, 
+                linestyle = "dashed");
+    
+        l = next(label)
+    
+        ax.plot(dates[0], 
+                data[i][1], 
+                c = c, 
+                label = l);
+    
+    # Add labels and change font 
+    plt.xlabel("Time", size = 13.5)
+    plt.ylabel("Percentage Return", size = 13.5)
+    
+    # Legend
+    ax.legend(loc = 'upper center', ncol = 10, bbox_to_anchor = (0.5, 1.05), fontsize = 11.5, columnspacing=0.8, frameon=False)
+    
+    # Horizontal line
+    ax.axhline(y=0, color='black', linewidth=0.75)  
+    #ax.axhline(y=1, color='black', linewidth=0.5)  
+    #ax.axhline(y=2, color='black', linewidth=0.5)  
+    #ax.axhline(y=3, color='black', linewidth=0.5)
+    
+    # Tick text, tick length and width
+    ax.tick_params(axis='both', which='major', labelsize=12.5, width = 1.2, length = 4)
+    
+    # Recession 1:
+    R1_start = pd.datetime(1990, 7, 1)
+    R1_end = pd.datetime(1991, 2, 1)
+    plt.axvspan(R1_start, R1_end, color="grey", alpha=0.25)
+    
+    # Recession 2:
+    R2_start = pd.datetime(2001, 6, 1)
+    R2_end = pd.datetime(2001, 11, 1)
+    plt.axvspan(R2_start, R2_end, color="grey", alpha=0.25)
+
+    # Save as PDF
+    if save_fig:
+        plt.savefig(f'{name}' + '.pdf', bbox_inches='tight')
+        
+    if hide:
+        plt.close()
+    else:
+        plt.show()
+    
+    return None
