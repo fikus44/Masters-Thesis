@@ -1,8 +1,13 @@
 import pandas as pd
 import numpy as np
 import itertools as it
+import tensorflow as tf
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras import regularizers
+from tensorflow.keras import callbacks
 
 
 def XY_split(data):
@@ -33,7 +38,8 @@ def XY_split(data):
 
 
 
-def loss_function(predicted, actual):
+def loss_function(predicted, 
+                  actual):
     
     """
     loss_function() computes the loss as the squared euclidian 
@@ -73,7 +79,8 @@ def loss_function(predicted, actual):
     return np.mean((predicted - actual) ** 2)
    
 
-def explained_variation(predicted, actual):
+def explained_variation(predicted, 
+                        actual):
     
     """
     explained_variation() computes the out-of-sample
@@ -165,7 +172,8 @@ def lambda_grid(X,
     return np.logspace(np.log10(lambda_max * eps), np.log10(lambda_max), num = n_lambdas)
 
 
-def to_append(pred, test_y):
+def to_append(pred, 
+              test_y):
     
     """
     to_append(pred, test_y) processes results to
@@ -309,7 +317,10 @@ def portfolio_sorts_SR(deciles):
     return avg_return, std, SR
 
 
-def cumulative_ret_fig(data, name, save_fig = False, hide = False):
+def cumulative_ret_fig(data, 
+                       name, 
+                       save_fig = False, 
+                       hide = False):
     
     """
     cumulative_ret_fig(data, name, save_fig, hide) computes
@@ -409,7 +420,10 @@ def cumulative_ret_fig(data, name, save_fig = False, hide = False):
     
     
 
-def deciles_10_1_fig(name, save_fig = False, hide = False, **kwargs):
+def deciles_10_1_fig(name, 
+                     save_fig = False, 
+                     hide = False, 
+                     **kwargs):
     
     """
     deciles_10_1_fig(name, save_fig, hide, **kwargs) 
@@ -521,3 +535,40 @@ def deciles_10_1_fig(name, save_fig = False, hide = False, **kwargs):
         plt.show()
     
     return None
+
+
+def NN(input_dimensions):
+    
+    """
+    NN() defines the architecture of the
+    Neural Network
+    
+    Parameters
+    ----------
+    
+        
+    Returns
+    -------
+        Instance of tf.keras.models.sequential()
+        class
+        
+    """
+    
+    # Build NN architecture 
+    model = tf.keras.models.Sequential()
+    model.add(Dense(units = 32, activation = 'relu', input_dim = len(input_dimensions.columns))) # 1. Hidden layer
+    model.add(BatchNormalization())
+    model.add(Dense(units = 16, activation = 'relu', kernel_regularizer = regularizers.l1(10 ** (-4)))) # 2. Hidden layer
+    model.add(BatchNormalization())
+    model.add(Dense(units = 8, activation = 'relu', kernel_regularizer = regularizers.l1(10 ** (-4)))) # 3. Hidden layer
+    model.add(BatchNormalization())
+    model.add(Dense(units = 4, activation = 'relu', kernel_regularizer = regularizers.l1(10 ** (-4)))) # 4. Hidden layer
+    model.add(BatchNormalization())
+    model.add(Dense(units = 1, activation = 'linear', kernel_regularizer = regularizers.l1(10 ** (-4)))) # Output layer - linear fixes nonnegative predictions
+    
+    # Compile model
+    model.compile(optimizer = 'adam', loss = 'mean_squared_error')
+    
+    
+    return model
+    
