@@ -203,6 +203,9 @@ def to_append(pred,
     pred_actual["pred"] = pred
     
     # Annual loss, xplained variation
+    # Incorrect as is. Unable to take log as some
+    # predictions are less than -1 (so +1 --> still
+    # negative). Take add 1 and take product instead
     annualised = pred_actual.groupby("permno").sum()
     
     # Annual loss
@@ -354,7 +357,7 @@ def cumulative_ret_fig(data,
     high_decile = data.index.get_level_values(1).max()
     
     # Running returns (cumulative)
-    run_ret = [list(it.accumulate(data[data.index.get_level_values(1) == x].ret)) for x in range(low_decile, high_decile + 1)]
+    run_ret = [list(it.accumulate(data[data.index.get_level_values(1) == x].log_ret)) for x in range(low_decile, high_decile + 1)]
     dates =  list(data.index.get_level_values(0).unique())
     dates = pd.to_datetime(dates, format = '%Y%m')
     
@@ -383,7 +386,7 @@ def cumulative_ret_fig(data,
         
     # Add labels and change font 
     plt.xlabel("Time", size = 13.5)
-    plt.ylabel("Percentage Return", size = 13.5)
+    plt.ylabel("Return", size = 13.5)
     
     # Legend
     ax.legend(loc = 'upper center', ncol = 10, bbox_to_anchor = (0.5, 1.05), fontsize = 11.5, columnspacing=0.8, frameon=False)
@@ -458,7 +461,7 @@ def deciles_10_1_fig(name,
     
     for i in kwargs:
         
-        data_temp = [list(it.accumulate(kwargs[i][kwargs[i].index.get_level_values(1) == x].ret)) for x in [1, 10]]
+        data_temp = [list(it.accumulate(kwargs[i][kwargs[i].index.get_level_values(1) == x].log_ret)) for x in [1, 10]]
         data.append(data_temp)
         
         if len(dates) == 0:
@@ -501,7 +504,7 @@ def deciles_10_1_fig(name,
     
     # Add labels and change font 
     plt.xlabel("Time", size = 13.5)
-    plt.ylabel("Percentage Return", size = 13.5)
+    plt.ylabel("Return", size = 13.5)
     
     # Legend
     ax.legend(loc = 'upper center', ncol = 10, bbox_to_anchor = (0.5, 1.05), fontsize = 11.5, columnspacing=0.8, frameon=False)
