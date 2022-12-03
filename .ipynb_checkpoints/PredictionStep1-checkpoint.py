@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import itertools as it
 import tensorflow as tf
+import statsmodels.api as sm  
+import statsmodels.formula.api as smf
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 from tensorflow.keras.layers import Dense
@@ -322,6 +324,7 @@ def portfolio_sorts_SR(deciles):
 
 def cumulative_ret_fig(data, 
                        name, 
+                       market,
                        save_fig = False, 
                        hide = False):
     
@@ -373,6 +376,17 @@ def cumulative_ret_fig(data,
     # Make iterable 
     color = iter(cm.viridis(np.linspace(0.1, 0.6, n)))
     label = iter([f'{ite}.' + ' Decile' for ite in range(1, n+1)])
+    
+    market = market[:len(run_ret[0]), ]
+    # Plot SP500 cumulative log return    
+    ax.plot(dates, 
+            market,
+            c = "black",
+            label = "SP500");
+        
+    # Add labels and change font 
+    plt.xlabel("Time", size = 13.5)
+    plt.ylabel("Return", size = 13.5)
 
     for i in range(n):
     
@@ -384,12 +398,9 @@ def cumulative_ret_fig(data,
                 c = c, 
                 label = l);
         
-    # Add labels and change font 
-    plt.xlabel("Time", size = 13.5)
-    plt.ylabel("Return", size = 13.5)
     
     # Legend
-    ax.legend(loc = 'upper center', ncol = 10, bbox_to_anchor = (0.5, 1.05), fontsize = 11.5, columnspacing=0.8, frameon=False)
+    ax.legend(loc = 'upper center', ncol = 11, bbox_to_anchor = (0.5, 1.05), fontsize = 11, columnspacing=0.7, frameon=False)
     
     # Horizontal lines
     ax.axhline(y=0, color='black', linewidth=0.75)  
@@ -423,7 +434,8 @@ def cumulative_ret_fig(data,
     
     
 
-def deciles_10_1_fig(name, 
+def deciles_10_1_fig(name,
+                     market,
                      save_fig = False, 
                      hide = False, 
                      **kwargs):
@@ -475,12 +487,20 @@ def deciles_10_1_fig(name,
     plt.rcParams['figure.dpi'] = 300
     plt.rcParams["font.family"] = "Times New Roman"
     
+    
     # Plot
     fig, ax = plt.subplots(figsize = (15,8))
 
     color = iter(cm.viridis(np.linspace(0.1, 0.6, n)))
     label = iter(["LR 1. Decile", "LR 10. Decile", "Lasso 1. Decile", "Lasso 10. Decile", "NN 1. Decile", "NN 10. Decile"])
 
+    market = market[:len(data[0][0]), ]
+    # Plot SP500 cumulative log return    
+    ax.plot(dates[0], 
+            market,
+            c = "black",
+            label = "SP500");
+    
     for i in range(n):
     
         c = next(color)
@@ -575,3 +595,208 @@ def NN(input_dimensions):
     
     return model
     
+
+def decile_10_1(data):
+    
+    """
+    decile_10_1(data) computes the
+    10-1 portfolio of returns and
+    predictions
+    
+    Parameters
+    ----------
+    
+     data : pd.DataFrame 
+        Returns and predictions data
+        of decile
+    
+    
+    Returns
+    -------
+        10-1 decile portfolio of returns
+        and predictions
+        
+    """
+    
+    # Compute 10-1 returns
+    ret_10_1 = data[data.index.get_level_values(1) == 10].ret - np.asarray(data[data.index.get_level_values(1) == 1].ret)
+    ret_10_1 = ret_10_1.reset_index()
+    ret_10_1.decile = "10-1"
+    ret_10_1.set_index(["date","decile"], inplace = True)
+    
+    # Compute 10-1 predictions
+    pred_10_1 = data[data.index.get_level_values(1) == 10].pred - np.asarray(data[data.index.get_level_values(1) == 1].pred)
+    pred_10_1 = pred_10_1.reset_index()
+    pred_10_1.decile = "10-1"
+    pred_10_1.set_index(["date","decile"], inplace = True)
+    
+    # Combine returns and predictions
+    pred_ret_10_1 = pd.concat((ret_10_1, pred_10_1), axis = 1)
+    
+    return pred_ret_10_1
+ 
+
+
+
+def portfolio_10_1_fig(name,
+                       market,
+                       save_fig = False, 
+                       hide = False, 
+                       **kwargs):
+    
+    """
+    deciles_10_1_fig(name, save_fig, hide, **kwargs) 
+    compute the cumulative return figure for the
+    high and low portfolios of each ML model specified
+    in the **kwargs argument. 
+    
+    Parameters
+    ----------
+    
+    name : String 
+        Name of figure when saving to disk
+        
+    save_fig : Boolean 
+        Save figure to disk
+        
+    hide : Boolean 
+        Prevent from printing figure
+        
+    **kwargs : 
+        Data to be plotted
+
+        
+    Returns
+    -------
+        None
+        
+    """
+    
+    data = []
+    dates = []
+    
+    for i in kwargs:
+        
+        data_temp = [list(it.accumulate(kwargs[i].log_ret))]
+        data.append(data_temp)
+        
+        if len(dates) == 0:
+            dates_temp = list(kwargs[i].index.get_level_values(0).unique())
+            dates_temp = pd.to_datetime(dates_temp, format = '%Y%m')
+            dates.append(dates_temp)
+    
+    n = len(data)
+    
+    # Setup
+    plt.rcParams['figure.dpi'] = 300
+    plt.rcParams["font.family"] = "Times New Roman"
+    
+    # Plot
+    fig, ax = plt.subplots(figsize = (15,8))
+
+    color = iter(cm.viridis(np.linspace(0.1, 0.6, n)))
+    label = iter(["LR 10-1 Portfolio", "Lasso 10-1 Portfolio", "NN 10-1 Portfolio"])
+    
+    market = market[:len(data[0][0]), ]
+    # Plot SP500 cumulative log return    
+    ax.plot(dates[0], 
+            market,
+            c = "black",
+            label = "SP500");
+
+    for i in range(n):
+    
+        c = next(color)
+        l = next(label)
+        
+        # I have to specify [0] for dates. Otherwise it is
+        # (1, 192) and so not compatible with data dimensioned
+        # (192,)
+        ax.plot(dates[0],
+                data[i][0], 
+                c = c, 
+                label = l);
+    
+    # Add labels and change font 
+    plt.xlabel("Time", size = 13.5)
+    plt.ylabel("Return", size = 13.5)
+    
+    # Legend
+    ax.legend(loc = 'upper center', ncol = 10, bbox_to_anchor = (0.5, 1.05), fontsize = 11.5, columnspacing=0.8, frameon=False)
+    
+    # Horizontal line
+    ax.axhline(y=0, color='black', linewidth=0.75)  
+    #ax.axhline(y=1, color='black', linewidth=0.5)  
+    #ax.axhline(y=2, color='black', linewidth=0.5)  
+    #ax.axhline(y=3, color='black', linewidth=0.5)
+    
+    # Tick text, tick length and width
+    ax.tick_params(axis='both', which='major', labelsize=12.5, width = 1.2, length = 4)
+    
+    # Recession 1:
+    R1_start = pd.datetime(1990, 7, 1)
+    R1_end = pd.datetime(1991, 2, 1)
+    plt.axvspan(R1_start, R1_end, color="grey", alpha=0.25)
+    
+    # Recession 2:
+    R2_start = pd.datetime(2001, 6, 1)
+    R2_end = pd.datetime(2001, 11, 1)
+    plt.axvspan(R2_start, R2_end, color="grey", alpha=0.25)
+
+    # Save as PDF
+    if save_fig:
+        plt.savefig(f'{name}' + '.pdf', bbox_inches='tight')
+        
+    if hide:
+        plt.close()
+    else:
+        plt.show()
+    
+    return None
+    
+
+def linearmodel(Y, X):
+    
+    """
+    linearmodel(Y,X) computes OLS estimate
+    
+    
+    Parameters
+    ----------
+    
+    Y : pd.Series
+        Dependent Variable
+        
+    X : pd.DataFrame 
+        Covariates
+        
+    Returns
+    -------
+        OLS estimates
+        
+    """
+    
+    X_const = sm.add_constant(np.asarray(X))
+    model = sm.OLS(Y, X_const)
+    fit = model.fit()
+                              
+    return fit
+
+
+def LM_tables(LR, lasso, NN):
+    
+    # Initialize tables
+    tvalue_table = pd.DataFrame(columns = ["LR", "Lasso", "NN"]) 
+    params_table = pd.DataFrame(columns = ["LR", "Lasso", "NN"])
+    
+    # Add data to table
+    params_table["LR"] = LR.params
+    params_table["Lasso"] = lasso.params
+    params_table["NN"] = NN.params
+    
+    # Add data to table
+    tvalue_table["LR"] = LR.tvalues
+    tvalue_table["Lasso"] = lasso.tvalues
+    tvalue_table["NN"] = NN.tvalues
+    
+    return params_table.round(4), tvalue_table.round(2)

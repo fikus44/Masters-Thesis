@@ -49,6 +49,14 @@ table1_data <- read.csv(file = "table1_data.csv")
 table2_data <- read.csv(file = "table2_data.csv")
 table4_data <- read.csv(file = "table4_data.csv")
 
+# Load Linear model regressions
+CAPM_params <- read.csv(file = "CAPM_params.csv")
+CAPM_tvalues <- read.csv(file = "CAPM_tvalues.csv")
+FF3_params <- read.csv(file = "FF3_params.csv")
+FF3_tvalues <- read.csv(file = "FF3_tvalues.csv")
+FF5_params <- read.csv(file = "FF5_params.csv")
+FF5_tvalues <- read.csv(file = "FF5_tvalues.csv")
+
 
 # Create tables
 names1 <- c("Metric", "Linear Regression", "Lasso", "Neural Network")
@@ -63,6 +71,9 @@ table2 <-  table_theme(table2_data, colnames = names1, caption = "Squared Predic
 
 names4 <- c("X", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 table4 <- table_theme(table4_data, colnames = names4, caption = "Cumulative return of all machine learning portfolios")
+
+
+# Create Linear model tables
 
 
 
