@@ -799,4 +799,4 @@ def LM_tables(LR, lasso, NN):
     tvalue_table["Lasso"] = lasso.tvalues
     tvalue_table["NN"] = NN.tvalues
     
-    return params_table.round(4), tvalue_table.round(2)
+    return params_table.round(2), tvalue_table.round(2)

@@ -74,7 +74,17 @@ table4 <- table_theme(table4_data, colnames = names4, caption = "Cumulative retu
 
 
 # Create Linear model tables
+names_FF3 <- c("Model" ,"Constant", "Mkt-RF", "SMB", "HML")
+FF3_params_table <- table_theme(FF3_params, colnames = names_FF3, caption = "FF3 Params")
+FF3_tvalues_table <- table_theme(FF3_tvalues, colnames = names_FF3, caption = "FF3 t")
 
+names_CAPM <- c("Model" ,"Constant", "Mkt-RF")
+CAPM_params_table <- table_theme(CAPM_params, colnames = names_CAPM, caption = "CAPM Params")
+CAPM_tvalues_table <- table_theme(CAPM_tvalues, colnames = names_CAPM, caption = "CAPM t")
+
+names_FF5 <- c("Model" ,"Constant", "Mkt-RF", "SMB", "HML", "RMW", "CMA")
+FF5_params_table <- table_theme(FF5_params, colnames = names_FF5, caption = "FF5 Params")
+FF5_tvalues_table <- table_theme(FF5_tvalues, colnames = names_FF5, caption = "FF5 t")
 
 
 # Timer finished

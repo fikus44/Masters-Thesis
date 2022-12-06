@@ -87,6 +87,9 @@ def data_processing_new(data, iteration):
         
     """
     
+    # Start time
+    st = time.time()
+    
     # Dates partitioning the training, validation, and test set 
     # according to Gu, Kelly, and Xiu (2020) by rolling-windows approach
     tr_start, tr_end, v_start, v_end, t_start, t_end = supp.partition_dates(iteration)
@@ -126,6 +129,11 @@ def data_processing_new(data, iteration):
     assert v_firm.shape[0] == v_macro.shape[0]
     assert t_firm.shape[0] == t_macro.shape[0]
     
+    # End time
+    et = time.time()
+    
+    print(f' data_processing_new time: {(et-st) / 60}')      
+    
     return tr_firm, v_firm, t_firm, tr_macro, v_macro, t_macro
     
     
@@ -158,6 +166,9 @@ def interaction_new(data, iteration):
     # for firm and macro data
     tr_firm, v_firm, t_firm, tr_macro, v_macro, t_macro = data_processing_new(data, iteration)
     
+    # Start time
+    st = time.time()
+    
     # Compute interaction terms 
     tr_interaction, mean, std = interaction_terms(tr_firm, 
                                                   tr_macro, 
@@ -181,6 +192,11 @@ def interaction_new(data, iteration):
     assert tr_interaction.isnull().values.any() == False
     assert v_interaction.isnull().values.any() == False
     assert t_interaction.isnull().values.any() == False
+          
+    # End time
+    et = time.time()
+    
+    print(f'interaction_new time: {(et-st) / 60}')
     
     return tr_interaction, v_interaction, t_interaction
 
@@ -286,6 +302,9 @@ def pca(data, iteration):
     # Compute interaction terms 
     tr_interaction, v_interaction, t_interaction = interaction_new(data, iteration)
     
+    # Start time
+    st = time.time()
+    
     # Create instance of PCA class object
     # and fit on training data
     pca = PCA(n_components = 0.95)
@@ -307,6 +326,11 @@ def pca(data, iteration):
     tr_pca = pd.DataFrame(tr_pca, columns = col_names)
     v_pca = pd.DataFrame(v_pca, columns = col_names)
     t_pca = pd.DataFrame(t_pca, columns = col_names)
+          
+    # End time
+    et = time.time()
+    
+    print(f'pca time: {(et-st) / 60}')
     
     return tr_pca, v_pca, t_pca
 
@@ -427,7 +451,7 @@ def complete_data_process(industry_data, returns_data, FM_data, iteration):
         
     """
     # Start time
-    st = time.time()
+    st_total = time.time()
     
     # Industry dummies
     tr_ind, v_ind, t_ind = process_dummies(data = industry_data, iteration = iteration) # industry code data 
@@ -449,7 +473,7 @@ def complete_data_process(industry_data, returns_data, FM_data, iteration):
     t_data = t_data.merge(t_ret, on = ["permno", "date"], how = "inner").set_index(["permno", "date"])
     
     # End time
-    et = time.time()
+    et_total = time.time()
     
     print(
     f'Rows Training set: {tr_data.shape[0]}, '
@@ -457,7 +481,7 @@ def complete_data_process(industry_data, returns_data, FM_data, iteration):
     f'Rows test set: {t_data.shape[0]}, '
     f'Columns: {t_data.shape[1]}, '
     f'Iteration finished: {iteration}, '
-    f'Time: {(et-st) / 60}, '
+    f'Time: {(et_total-st_total) / 60}, '
     f'Training Dtypes: {tr_data.dtypes.value_counts()}, '
     f'Validation Dtypes: {v_data.dtypes.value_counts()}, '
     f'Test Dtypes: {t_data.dtypes.value_counts()},'
