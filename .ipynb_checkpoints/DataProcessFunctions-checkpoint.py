@@ -196,7 +196,26 @@ def interaction_new(data, iteration):
     # End time
     et = time.time()
     
-    print(f'interaction_new time: {(et-st) / 60}')
+    print(
+    f'interaction_new time: {(et-st) / 60} '
+    f'Training Dtypes: {tr_interaction.dtypes.value_counts()}, '
+    f'Validation Dtypes: {v_interaction.dtypes.value_counts()}, '
+    f'Test Dtypes: {t_interaction.dtypes.value_counts()},'
+    )
+    
+    '''
+    # Takes way too long for some reason
+    # Check if any of the columns are 64bit.
+    # If they are downcast
+    dtypes = list(tr_interaction.dtypes.value_counts().index)
+    dtypes_str = [str(i) for i in dtypes]
+    
+    if "float64" in dtypes_str:
+        print("float64 detected")
+        tr_interaction = tr_interaction.round(3)
+        supp.downcast(tr_interaction)
+        print(f'Training Dtypes post downcast: {tr_interaction.dtypes.value_counts()}')
+    '''
     
     return tr_interaction, v_interaction, t_interaction
 
@@ -255,8 +274,10 @@ def interaction_terms(firm_data, macro_data, mean, std, training_set = False):
         
         df_ite = pd.DataFrame(product_ite, columns = column_ite)
         interaction = pd.concat([interaction, df_ite], axis = 1)
-        
     
+    # Check if converrsino to 64bit float happens before imputation and standardiaztion
+    #print(f'Interaction pre imputation and standardization: {interaction.dtypes.value_counts()}')
+        
     # Save mean and standard deviation for validation and test set
     # Impute data and standardize training data in preperation
     # of PCA
@@ -265,12 +286,17 @@ def interaction_terms(firm_data, macro_data, mean, std, training_set = False):
         std = interaction.std()#.values
         
         interaction = interaction.fillna(0)
-        interaction = interaction.apply(lambda x: (x - np.mean(x)) / np.std(x), axis = 0)
-                
+        interaction = (interaction - interaction.mean()) / interaction.std()
+        #interaction = interaction.apply(lambda x: (x - np.mean(x)) / np.std(x), axis = 0) # Apply occasionally makes the data 64 bit again - DO NOT USE
+        
+        #print(f'Interaction post imputation and standardization: {interaction.dtypes.value_counts()}')
+        
         return interaction, mean, std
                     
     interaction = interaction.fillna(0)
-    interaction = interaction.apply(lambda x: (x - mean) / std, axis = 1)                      
+    interaction = interaction.apply(lambda x: (x - mean) / std, axis = 1)
+    
+    #print(f'Interaction post imputation and standardization: {interaction.dtypes.value_counts()}')
                           
     return interaction
 
@@ -482,9 +508,9 @@ def complete_data_process(industry_data, returns_data, FM_data, iteration):
     f'Columns: {t_data.shape[1]}, '
     f'Iteration finished: {iteration}, '
     f'Time: {(et_total-st_total) / 60}, '
-    f'Training Dtypes: {tr_data.dtypes.value_counts()}, '
-    f'Validation Dtypes: {v_data.dtypes.value_counts()}, '
-    f'Test Dtypes: {t_data.dtypes.value_counts()},'
+    #f'Training Dtypes: {tr_data.dtypes.value_counts()}, '
+    #f'Validation Dtypes: {v_data.dtypes.value_counts()}, '
+    #f'Test Dtypes: {t_data.dtypes.value_counts()},'
     )
     
     
