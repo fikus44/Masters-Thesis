@@ -421,6 +421,11 @@ def cumulative_ret_fig(data,
     R2_end = pd.datetime(2001, 11, 1)
     plt.axvspan(R2_start, R2_end, color="grey", alpha=0.25)
     
+    # Recession 3:
+    R3_start = pd.datetime(2008, 1, 1)
+    R3_end = pd.datetime(2009, 6, 1)
+    plt.axvspan(R3_start, R3_end, color="grey", alpha=0.25)
+    
     # Save as PDF
     if save_fig:
         plt.savefig(f'{name}' + '.pdf', bbox_inches='tight')
@@ -547,6 +552,11 @@ def deciles_10_1_fig(name,
     R2_start = pd.datetime(2001, 6, 1)
     R2_end = pd.datetime(2001, 11, 1)
     plt.axvspan(R2_start, R2_end, color="grey", alpha=0.25)
+    
+    # Recession 3:
+    R3_start = pd.datetime(2008, 1, 1)
+    R3_end = pd.datetime(2009, 6, 1)
+    plt.axvspan(R3_start, R3_end, color="grey", alpha=0.25)
 
     # Save as PDF
     if save_fig:
@@ -742,6 +752,11 @@ def portfolio_10_1_fig(name,
     R2_start = pd.datetime(2001, 6, 1)
     R2_end = pd.datetime(2001, 11, 1)
     plt.axvspan(R2_start, R2_end, color="grey", alpha=0.25)
+    
+    # Recession 3:
+    R3_start = pd.datetime(2008, 1, 1)
+    R3_end = pd.datetime(2009, 6, 1)
+    plt.axvspan(R3_start, R3_end, color="grey", alpha=0.25)
 
     # Save as PDF
     if save_fig:
