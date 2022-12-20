@@ -62,10 +62,6 @@ FF5_tvalues <- read.csv(file = "FF5_tvalues.csv")
 names1 <- c("Metric", "Linear Regression", "Lasso", "Neural Network")
 table1 <- table_theme(table1_data, colnames = names1, caption = "Squared Prediction Error and Explained Variation") 
 
-names2 <- c("date", "permno", "sic2_46", "sic2_47", "sic2_48", "sic2_49", "sic2_50", "sic2_51", "sic2_52")
-table2 <- table_theme(head(MA2_data %>% select(date, permno, sic2_46:sic2_52)), colnames = names2, caption = "Dummies") %>% 
-  kable_styling(latex_options = "scale_down")
-
 names2 <- c("Metric", "Linear Regression", "Lasso", "Neural Network")
 table2 <-  table_theme(table2_data, colnames = names1, caption = "Squared Prediction Error and Explained Variation") 
 

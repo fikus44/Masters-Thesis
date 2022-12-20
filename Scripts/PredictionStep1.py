@@ -606,7 +606,7 @@ def NN(input_dimensions):
     return model
     
 
-def decile_10_1(data):
+def decile_10_1(data, log = False):
     
     """
     decile_10_1(data) computes the
@@ -627,26 +627,42 @@ def decile_10_1(data):
         and predictions
         
     """
+    if log == False:
+        # Compute 10-1 returns
+        ret_10_1 = data[data.index.get_level_values(1) == 10].ret - np.asarray(data[data.index.get_level_values(1) == 1].ret)
+        ret_10_1 = ret_10_1.reset_index()
+        ret_10_1.decile = "10-1"
+        ret_10_1.set_index(["date","decile"], inplace = True)
     
-    # Compute 10-1 returns
-    ret_10_1 = data[data.index.get_level_values(1) == 10].ret - np.asarray(data[data.index.get_level_values(1) == 1].ret)
-    ret_10_1 = ret_10_1.reset_index()
-    ret_10_1.decile = "10-1"
-    ret_10_1.set_index(["date","decile"], inplace = True)
+        # Compute 10-1 predictions
+        pred_10_1 = data[data.index.get_level_values(1) == 10].pred - np.asarray(data[data.index.get_level_values(1) == 1].pred)
+        pred_10_1 = pred_10_1.reset_index()
+        pred_10_1.decile = "10-1"
+        pred_10_1.set_index(["date","decile"], inplace = True)
     
-    # Compute 10-1 predictions
-    pred_10_1 = data[data.index.get_level_values(1) == 10].pred - np.asarray(data[data.index.get_level_values(1) == 1].pred)
-    pred_10_1 = pred_10_1.reset_index()
-    pred_10_1.decile = "10-1"
-    pred_10_1.set_index(["date","decile"], inplace = True)
+        # Combine returns and predictions
+        pred_ret_10_1 = pd.concat((ret_10_1, pred_10_1), axis = 1)
     
-    # Combine returns and predictions
-    pred_ret_10_1 = pd.concat((ret_10_1, pred_10_1), axis = 1)
+        return pred_ret_10_1
     
-    return pred_ret_10_1
+    if log == True:
+        # Compute 10-1 log returns
+        ret_10_1 = data[data.index.get_level_values(1) == 10].log_ret - np.asarray(data[data.index.get_level_values(1) == 1].log_ret)
+        ret_10_1 = ret_10_1.reset_index()
+        ret_10_1.decile = "10-1"
+        ret_10_1.set_index(["date","decile"], inplace = True)
+    
+        # Compute 10-1 log predictions
+        pred_10_1 = data[data.index.get_level_values(1) == 10].pred - np.asarray(data[data.index.get_level_values(1) == 1].pred)
+        pred_10_1 = pred_10_1.reset_index()
+        pred_10_1.decile = "10-1"
+        pred_10_1.set_index(["date","decile"], inplace = True)
+    
+        # Combine log returns and log predictions
+        pred_ret_10_1 = pd.concat((ret_10_1, pred_10_1), axis = 1)
+    
+        return pred_ret_10_1
  
-
-
 
 def portfolio_10_1_fig(name,
                        market,
